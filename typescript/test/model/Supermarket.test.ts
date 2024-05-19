@@ -1,149 +1,186 @@
-import {FakeCatalog} from "./FakeCatalog"
-import {Product} from "../../src/model/Product"
-import {SupermarketCatalog} from "../../src/model/SupermarketCatalog"
-import {Receipt} from "../../src/model/Receipt"
-import {ShoppingCart} from "../../src/model/ShoppingCart"
-import {Teller} from "../../src/model/Teller"
-import {SpecialOfferType} from "../../src/model/SpecialOfferType"
-import {ProductUnit} from "../../src/model/ProductUnit"
-import {ReceiptPrinter} from "../../src/ReceiptPrinter"
-import {expect} from 'chai'
-import AsyncFunc = Mocha.AsyncFunc
-const approvals = require('approvals')
+import { FakeCatalog } from "./FakeCatalog";
+import { Product } from "../../src/model/Product";
+import { SupermarketCatalog } from "../../src/model/SupermarketCatalog";
+import { Receipt } from "../../src/model/Receipt";
+import { ShoppingCart } from "../../src/model/ShoppingCart";
+import { Teller } from "../../src/model/Teller";
+import { SpecialOfferType } from "../../src/model/SpecialOfferType";
+import { ProductUnit } from "../../src/model/ProductUnit";
+import { ReceiptPrinter } from "../../src/ReceiptPrinter";
+import { expect } from "chai";
+import AsyncFunc = Mocha.AsyncFunc;
+const approvals = require("approvals");
 
-type Approvals = { verify: (a: string) => void }
-describe('Supermarket', function () {
+type Approvals = { verify: (a: string) => void };
+describe("Supermarket", function () {
+  approvals.mocha();
 
-    approvals.mocha()
+  let catalog: SupermarketCatalog;
+  let teller: Teller;
+  let theCart: ShoppingCart;
+  let toothbrush: Product;
+  let toothpaste: Product;
+  let rice: Product;
+  let apples: Product;
+  let cherryTomatoes: Product;
 
-    let catalog: SupermarketCatalog;
-    let teller: Teller;
-    let theCart: ShoppingCart;
-    let toothbrush: Product;
-    let rice: Product;
-    let apples: Product;
-    let cherryTomatoes: Product;
+  beforeEach(function () {
+    catalog = new FakeCatalog();
+    teller = new Teller(catalog);
+    theCart = new ShoppingCart();
 
-    beforeEach(function () {
+    toothbrush = new Product("toothbrush", ProductUnit.Each);
+    catalog.addProduct(toothbrush, 0.99);
+    toothpaste = new Product("toothpaste", ProductUnit.Each);
+    catalog.addProduct(toothpaste, 1.79);
+    rice = new Product("rice", ProductUnit.Each);
+    catalog.addProduct(rice, 2.99);
+    apples = new Product("apples", ProductUnit.Kilo);
+    catalog.addProduct(apples, 1.99);
+    cherryTomatoes = new Product("cherry tomato box", ProductUnit.Each);
+    catalog.addProduct(cherryTomatoes, 0.69);
+  });
 
-        catalog = new FakeCatalog();
-        teller = new Teller(catalog);
-        theCart = new ShoppingCart();
+  it("an_empty_shopping_cart_should_cost_nothing", function (this: any) {
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
-        toothbrush = new Product("toothbrush", ProductUnit.Each);
-        catalog.addProduct(toothbrush, 0.99);
-        rice = new Product("rice", ProductUnit.Each);
-        catalog.addProduct(rice, 2.99);
-        apples = new Product("apples", ProductUnit.Kilo);
-        catalog.addProduct(apples, 1.99);
-        cherryTomatoes = new Product("cherry tomato box", ProductUnit.Each);
-        catalog.addProduct(cherryTomatoes, 0.69);
+  it("one_normal_item", function (this: any) {
+    theCart.addItem(toothbrush);
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
-    });
+  it("two_normal_items", function (this: any) {
+    theCart.addItem(toothbrush);
+    theCart.addItem(rice);
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
+  it("buy_two_get_one_free", function (this: any) {
+    theCart.addItem(toothbrush);
+    theCart.addItem(toothbrush);
+    theCart.addItem(toothbrush);
+    teller.addSpecialOffer(
+      SpecialOfferType.ThreeForTwo,
+      toothbrush,
+      catalog.getUnitPrice(toothbrush)
+    );
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    expect(receipt.getDiscounts()).lengthOf(1);
 
-    it('an_empty_shopping_cart_should_cost_nothing', function (this: any) {
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    });
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
+  it("buy_five_get_one_free", function (this: any) {
+    theCart.addItem(toothbrush);
+    theCart.addItem(toothbrush);
+    theCart.addItem(toothbrush);
+    theCart.addItem(toothbrush);
+    theCart.addItem(toothbrush);
+    teller.addSpecialOffer(
+      SpecialOfferType.ThreeForTwo,
+      toothbrush,
+      catalog.getUnitPrice(toothbrush)
+    );
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
-    it('one_normal_item',function (this: any) {
-        theCart.addItem(toothbrush);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    })
+  it("loose_weight_product", function (this: any) {
+    theCart.addItemQuantity(apples, 0.5);
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
+  it("percent_discount", function (this: any) {
+    theCart.addItem(rice);
+    teller.addSpecialOffer(SpecialOfferType.TenPercentDiscount, rice, 10.0);
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    expect(receipt.getDiscounts()).lengthOf(1);
 
-    it('two_normal_items',function (this: any) {
-        theCart.addItem(toothbrush);
-        theCart.addItem(rice);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    })
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
+  it("two for amount discount", function (this: any) {
+    theCart.addItem(cherryTomatoes);
+    theCart.addItem(cherryTomatoes);
+    teller.addSpecialOffer(SpecialOfferType.TwoForAmount, cherryTomatoes, 0.99);
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    expect(receipt.getDiscounts()).lengthOf(1);
 
-    it('buy_two_get_one_free',function (this: any) {
-        theCart.addItem(toothbrush);
-        theCart.addItem(toothbrush);
-        theCart.addItem(toothbrush);
-        teller.addSpecialOffer(SpecialOfferType.ThreeForTwo, toothbrush, catalog.getUnitPrice(toothbrush));
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        expect(receipt.getDiscounts()).lengthOf(1)
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    })
+  it("FiveForY_discount", function (this: any) {
+    theCart.addItemQuantity(apples, 5);
+    teller.addSpecialOffer(SpecialOfferType.FiveForAmount, apples, 6.99);
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
+  it("FiveForY_discount_withSix", function (this: any) {
+    theCart.addItemQuantity(apples, 6);
+    teller.addSpecialOffer(SpecialOfferType.FiveForAmount, apples, 6.99);
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
-    it('buy_five_get_one_free',function (this: any) {
-        theCart.addItem(toothbrush);
-        theCart.addItem(toothbrush);
-        theCart.addItem(toothbrush);
-        theCart.addItem(toothbrush);
-        theCart.addItem(toothbrush);
-        teller.addSpecialOffer(SpecialOfferType.ThreeForTwo, toothbrush, catalog.getUnitPrice(toothbrush));
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        this.verify (new ReceiptPrinter(40).printReceipt(receipt));
-    })
+  it("FiveForY_discount_withSixteen", function (this: any) {
+    theCart.addItemQuantity(apples, 16);
+    teller.addSpecialOffer(SpecialOfferType.FiveForAmount, apples, 6.99);
+    const receipt = teller.checksOutArticlesFrom(theCart);
+    this.verify(new ReceiptPrinter(40).printReceipt(receipt));
+  });
 
+  it("FiveForY_discount_withFour", function (this: any) {
+    theCart.addItemQuantity(apples, 4);
+    teller.addSpecialOffer(SpecialOfferType.FiveForAmount, apples, 6.99);
+    const receipt = teller.checksOutArticlesFrom(theCart);
 
-    it('loose_weight_product',function (this: any) {
-        theCart.addItemQuantity(apples, .5);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    })
+    let receiptPrinter = new ReceiptPrinter(40);
+    this.verify(receiptPrinter.printReceipt(receipt));
+  });
 
+  it("one toothbrush one toothpaste bundle", function (this: any) {
+    theCart.addItem(toothbrush);
+    theCart.addItem(toothpaste);
+    teller.addSpecialOffer(
+      SpecialOfferType.BundleOneToothbrushOneToothpaste,
+      toothbrush,
+      10
+    );
+    teller.addSpecialOffer(
+      SpecialOfferType.BundleOneToothbrushOneToothpaste,
+      toothpaste,
+      10
+    );
+    const receipt = teller.checksOutArticlesFrom(theCart);
 
-    it('percent_discount',function (this: any) {
-        theCart.addItem(rice);
-        teller.addSpecialOffer(SpecialOfferType.TenPercentDiscount, rice, 10.0);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        expect(receipt.getDiscounts()).lengthOf(1)
+    let receiptPrinter = new ReceiptPrinter(40);
+    this.verify(receiptPrinter.printReceipt(receipt));
+  });
+  it("bundle applies properly", function (this: any) {
+    theCart.addItem(toothbrush);
+    theCart.addItem(toothpaste);
+    theCart.addItem(toothpaste);
+    theCart.addItem(toothpaste);
 
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    })
+    teller.addSpecialOffer(
+      SpecialOfferType.BundleOneToothbrushOneToothpaste,
+      toothbrush,
+      10
+    );
+    teller.addSpecialOffer(
+      SpecialOfferType.BundleOneToothbrushOneToothpaste,
+      toothpaste,
+      10
+    );
+    const receipt = teller.checksOutArticlesFrom(theCart);
 
-
-    it('xForY_discount',function (this: any) {
-        theCart.addItem(cherryTomatoes);
-        theCart.addItem(cherryTomatoes);
-        teller.addSpecialOffer(SpecialOfferType.TwoForAmount, cherryTomatoes, .99);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        expect(receipt.getDiscounts()).lengthOf(1)
-
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    })
-
-    it('FiveForY_discount', function (this: any) {
-        theCart.addItemQuantity(apples, 5);
-        teller.addSpecialOffer(SpecialOfferType.FiveForAmount, apples, 6.99);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    });
-
-    it('FiveForY_discount_withSix',function (this: any) {
-        theCart.addItemQuantity(apples, 6);
-        teller.addSpecialOffer(SpecialOfferType.FiveForAmount, apples, 6.99);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    })
-
-
-    it('FiveForY_discount_withSixteen',function (this: any) {
-        theCart.addItemQuantity(apples, 16);
-        teller.addSpecialOffer(SpecialOfferType.FiveForAmount, apples, 6.99);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-        this.verify(new ReceiptPrinter(40).printReceipt(receipt));
-    })
-
-
-    it('FiveForY_discount_withFour',function (this: any) {
-        theCart.addItemQuantity(apples, 4);
-        teller.addSpecialOffer(SpecialOfferType.FiveForAmount, apples, 6.99);
-        const receipt = teller.checksOutArticlesFrom(theCart);
-
-        let receiptPrinter = new ReceiptPrinter(40)
-        this.verify(receiptPrinter.printReceipt(receipt));
-    })
-
+    let receiptPrinter = new ReceiptPrinter(40);
+    this.verify(receiptPrinter.printReceipt(receipt));
+  });
 });
