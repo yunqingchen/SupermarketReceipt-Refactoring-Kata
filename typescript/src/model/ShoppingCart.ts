@@ -66,8 +66,6 @@ export class ShoppingCart {
       // product: Product { name: 'toothpaste', unit: 1 }
       const quantity: number = productQuantity.quantity;
       // quantity: 1
-      // let bundleToothbrushQuantity =
-      // let bundleToothpasteQuantity =
       if (offers[productName]) {
         const offer: Offer = offers[productName];
         const unitPrice: number = catalog.getUnitPrice(product);
@@ -122,11 +120,11 @@ export class ShoppingCart {
         ) {
           let toothbrushQuantity = this.productQuantities().toothbrush.quantity;
           let toothpasteQuantity = this.productQuantities().toothpaste.quantity;
-          let bundleNum = Math.min(toothbrushQuantity, toothpasteQuantity);
+          let bundleQuantity = Math.min(toothbrushQuantity, toothpasteQuantity);
           discount = new Discount(
             product,
             offer.argument + "% off (bundle)",
-            (bundleNum * unitPrice * offer.argument) / 100.0
+            (bundleQuantity * unitPrice * offer.argument) / 100.0
           );
         }
         if (discount != null) receipt.addDiscount(discount);
