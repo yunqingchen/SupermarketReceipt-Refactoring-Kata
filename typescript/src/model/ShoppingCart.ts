@@ -54,7 +54,6 @@ export class ShoppingCart {
     offers: OffersByProduct,
     catalog: SupermarketCatalog
   ): void {
-    // console.log(this._productQuantities());
     for (const productName in this.productQuantities()) {
       const productQuantity = this._productQuantities[productName];
       // productQuantity: ProductQuantity {
@@ -118,9 +117,14 @@ export class ShoppingCart {
         if (
           offer.offerType == SpecialOfferType.BundleOneToothbrushOneToothpaste
         ) {
-          let toothbrushQuantity = this.productQuantities().toothbrush.quantity;
-          let toothpasteQuantity = this.productQuantities().toothpaste.quantity;
-          let bundleQuantity = Math.min(toothbrushQuantity, toothpasteQuantity);
+          const toothbrushQuantity =
+            this.productQuantities().toothbrush.quantity;
+          const toothpasteQuantity =
+            this.productQuantities().toothpaste.quantity;
+          const bundleQuantity = Math.min(
+            toothbrushQuantity,
+            toothpasteQuantity
+          );
           discount = new Discount(
             product,
             offer.argument + "% off (bundle)",

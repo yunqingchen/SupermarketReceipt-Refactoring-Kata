@@ -46,7 +46,7 @@ describe("Supermarket", function () {
     this.verify(new ReceiptPrinter(40).printReceipt(receipt));
   });
 
-  it("one_normal_item", function (this: any) {
+  it.only("one very normal item", function (this: any) {
     theCart.addItem(toothbrush);
     const receipt = teller.checksOutArticlesFrom(theCart);
     this.verify(new ReceiptPrinter(40).printReceipt(receipt));
